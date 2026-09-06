@@ -6,6 +6,16 @@
 static double *a;
 static int n, *ia, *ja;
 
+/* Niveau de verbosite de PRIMME : 0 = silencieux (defaut), 2 = trace des
+   iterations, 3 = trace + affichage complet des parametres. Modifiable par
+   primme_set_verbosity(). */
+static int verbosity = 0;
+
+void primme_set_verbosity(int v)
+{
+    verbosity = v;
+}
+
 void matvec_primme(void *vx, void *vy, int *blockSize, primme_params *primme)
 /*
    But
@@ -87,7 +97,7 @@ int primme(int primme_n, int *primme_ia, int *primme_ja, double *primme_a,
                                 /* nom de fonction du produit matrice-vecteur */
     primme.n = primme_n; /* dimensions de la matrice */
     primme.numEvals = nev; /* nombre de paires valeur propre-vecteur propre */
-    primme.printLevel = 2; /* niveau d'affichage (1-4) */
+    primme.printLevel = verbosity; /* niveau d'affichage (0-4) */
 
     err = primme_set_method (DEFAULT_MIN_TIME, &primme);
     if(err){
@@ -95,8 +105,9 @@ int primme(int primme_n, int *primme_ia, int *primme_ja, double *primme_a,
         return 1;
     }
   
-    /* afficher les papramètres de PRIMME */
-    primme_display_params (primme);
+    /* afficher les paramètres de PRIMME */
+    if (verbosity >= 3)
+        primme_display_params (primme);
 
     /* Caclul des valeurs et vecteurs propres */
     err = dprimme (evals, evecs, resn, &primme);

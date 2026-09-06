@@ -70,4 +70,13 @@ int  grid_is_unknown(const grid_t *g, int i, int j);
 /* Le nœud (i,j) appartient-il à Ω, bord ∂Ω compris ? (utile pour l'affichage) */
 int  grid_is_in_domain(const grid_t *g, int i, int j);
 
+/*
+  Plus petite valeur de m compatible avec la géométrie, c.-à-d. la grille de
+  référence de l'annexe. Comme diviser h par deux préserve la compatibilité,
+  les grilles (m-1)*2^k + 1 sont toutes admissibles : c'est la suite de
+  raffinement utilisée pour les études de convergence. Retourne 0 si aucune
+  grille n'est admissible (géométrie dégénérée).
+*/
+int  grid_smallest_m(void);
+
 #endif /* GEOMETRY_H */

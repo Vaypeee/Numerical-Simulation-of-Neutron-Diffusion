@@ -96,6 +96,17 @@ int grid_is_in_domain(const grid_t *g, int i, int j)
     return 1;
 }
 
+int grid_smallest_m(void)
+{
+    int m;
+
+    for (m = 3; m <= 10000; m++)
+        if (grid_is_admissible(m))
+            return m;
+
+    return 0;   /* geometrie degeneree : aucune grille ne convient */
+}
+
 int grid_init(grid_t *g, int m)
 {
     int i, j, n = 0;

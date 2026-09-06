@@ -6,6 +6,7 @@
 #include "geometry.h"
 #include "prob.h"
 #include "residual.h"
+#include "critical.h"
 #include "mytime.h"
 #include "interface_primme.h"
 
@@ -112,13 +113,16 @@ static void usage(const char *prog)
            GRILLE_REFERENCE);
     printf("  --check     comparer la matrice aux fichiers CSR de reference\n");
     printf("  --no-solve  ne pas appeler PRIMME (generation de la matrice seule)\n");
-    printf("  --bench     comparer les deux implementations du residu\n\n");
+    printf("  --bench     comparer les deux implementations du residu\n");
+    printf("  --critical  etude de convergence de la dimension critique\n");
+    printf("  --levels K  nombre de grilles pour --critical (defaut : 6)\n\n");
 }
 
 int main(int argc, char *argv[])
 {
     int     m = GRILLE_REFERENCE, nev = 1, k;
-    int     do_check = 0, do_solve = 1, do_bench = 0;
+    int     do_check = 0, do_solve = 1, do_bench = 0, do_critical = 0;
+    int     niveaux = 6;
     int     n, *ia, *ja;
     double *a, *evals, *evecs, res;
     double  tc1, tc2, tw1, tw2;
@@ -130,8 +134,14 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[k], "--check") == 0)            do_check = 1;
         else if (strcmp(argv[k], "--no-solve") == 0)         do_solve = 0;
         else if (strcmp(argv[k], "--bench") == 0)            do_bench = 1;
+        else if (strcmp(argv[k], "--critical") == 0)         do_critical = 1;
+        else if (strcmp(argv[k], "--levels") == 0 && k + 1 < argc) niveaux = atoi(argv[++k]);
         else { usage(argv[0]); return 1; }
     }
+
+    /* --- tache 3 : etude de convergence autonome ------------------------- */
+    if (do_critical)
+        return critical_study(niveaux);
 
     /* --- generation du probleme ----------------------------------------- */
     if (grid_init(&g, m))
@@ -185,6 +195,9 @@ int main(int argc, char *argv[])
     /* --- tache 2 : norme relative du residu ------------------------------ */
     res = residual_norm(n, ia, ja, a, evals[0], evecs);
     printf("Residu relatif ||A.Phi - beta^2.Phi|| / ||Phi|| : %.6e\n\n", res);
+
+    /* --- tache 3 : dimensions critiques pour cette grille ---------------- */
+    critical_report(evals[0], g.h, m);
 
     if (do_bench) {
         /* nombre de repetitions ajuste pour que la mesure dure ~1 s */
