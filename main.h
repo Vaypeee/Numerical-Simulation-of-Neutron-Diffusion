@@ -13,4 +13,10 @@
 /* Grille de référence de l'annexe : celle dessinée en pointillé sur la figure. */
 #define GRILLE_REFERENCE 8
 
+/* Grilles utilisées pour la tâche 4 : l'énoncé demande un affichage du mode
+   fondamental pour m <= 20 et pour m >= 500. Ces deux valeurs sont de la
+   forme 7k+1, donc compatibles avec la géométrie du projet 21. */
+#define PLOT_M_GROSSIER  15
+#define PLOT_M_FIN      505
+
 #endif /* MAIN_H */

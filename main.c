@@ -7,6 +7,7 @@
 #include "prob.h"
 #include "residual.h"
 #include "critical.h"
+#include "plot.h"
 #include "mytime.h"
 #include "interface_primme.h"
 
@@ -115,13 +116,17 @@ static void usage(const char *prog)
     printf("  --no-solve  ne pas appeler PRIMME (generation de la matrice seule)\n");
     printf("  --bench     comparer les deux implementations du residu\n");
     printf("  --critical  etude de convergence de la dimension critique\n");
-    printf("  --levels K  nombre de grilles pour --critical (defaut : 6)\n\n");
+    printf("  --levels K  nombre de grilles pour --critical (defaut : 6)\n");
+    printf("  --plot      tracer le mode fondamental (gnuplot) pour la grille -m\n");
+    printf("  --plot-all  tracer pour m = %d (grossier) et m = %d (fin)\n\n",
+           PLOT_M_GROSSIER, PLOT_M_FIN);
 }
 
 int main(int argc, char *argv[])
 {
     int     m = GRILLE_REFERENCE, nev = 1, k;
     int     do_check = 0, do_solve = 1, do_bench = 0, do_critical = 0;
+    int     do_plot = 0, do_plot_all = 0;
     int     niveaux = 6;
     int     n, *ia, *ja;
     double *a, *evals, *evecs, res;
@@ -135,9 +140,19 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[k], "--no-solve") == 0)         do_solve = 0;
         else if (strcmp(argv[k], "--bench") == 0)            do_bench = 1;
         else if (strcmp(argv[k], "--critical") == 0)         do_critical = 1;
+        else if (strcmp(argv[k], "--plot") == 0)             do_plot = 1;
+        else if (strcmp(argv[k], "--plot-all") == 0)         do_plot_all = 1;
         else if (strcmp(argv[k], "--levels") == 0 && k + 1 < argc) niveaux = atoi(argv[++k]);
         else { usage(argv[0]); return 1; }
     }
+
+    /* --- tache 4 : visualisation du mode fondamental --------------------- */
+    if (do_plot_all)
+        return plot_fundamental_mode(PLOT_M_GROSSIER, "out")
+            || plot_fundamental_mode(PLOT_M_FIN, "out");
+
+    if (do_plot)
+        return plot_fundamental_mode(m, "out");
 
     /* --- tache 3 : etude de convergence autonome ------------------------- */
     if (do_critical)
