@@ -3,6 +3,17 @@
 Résolution de l'équation de diffusion neutronique stationnaire dans le cœur
 d'un réacteur nucléaire, par différences finies sur grille structurée.
 
+<p align="center">
+  <img src="figures/mode_m505_surface.png" width="760"
+       alt="Mode fondamental du flux neutronique dans un réacteur en L, calculé sur 211 537 inconnues">
+</p>
+
+<p align="center">
+  <em>Mode fondamental du flux neutronique dans le réacteur critique
+  (211 537 inconnues). Le flux s'annule sur toute la frontière, encoche
+  comprise.</em>
+</p>
+
 Le problème se ramène à la recherche de la plus petite valeur propre d'un
 grand système creux :
 
@@ -91,12 +102,29 @@ donne p = 4/3, sinon p = 2.
 
 ### Mode fondamental
 
-![mode fondamental](figures/mode_m505_carte.png)
+<table>
+<tr>
+<td width="50%"><img src="figures/mode_m15_carte.png" alt="mode fondamental, grille grossière"></td>
+<td width="50%"><img src="figures/mode_m505_carte.png" alt="mode fondamental, grille fine"></td>
+</tr>
+<tr>
+<td align="center"><em>m = 15 — 137 inconnues</em></td>
+<td align="center"><em>m = 505 — 211 537 inconnues</em></td>
+</tr>
+</table>
 
-Le flux se concentre dans la partie pleine du L. Sur ∂Ω il est nul
-exactement — y compris le long de l'encoche — et le flux sur la première
-couche intérieure passe de 37 % du maximum à m = 15 à 2,9 % à m = 505,
-confirmant que la condition de Dirichlet est atteinte continûment.
+Le flux se concentre dans la partie pleine du L, avec un maximum vers
+(1,9 ; 2,35) m. La couronne bleu foncé est la frontière ∂Ω à φ = 0 ; le
+rectangle blanc est l'encoche, hors du réacteur.
+
+Sur ∂Ω le flux est nul exactement — y compris le long de l'encoche — et sur
+la première couche intérieure il passe de 37 % du maximum à m = 15 à **2,9 %
+à m = 505**, confirmant que la condition de Dirichlet est atteinte
+continûment et non par un saut.
+
+Sur la grille fine, les isolignes se resserrent au voisinage du coin rentrant
+(2,1 ; 1,06) : c'est la signature de la singularité `φ ~ r^(2/3)` responsable
+de la convergence en `O(h^(4/3))`.
 
 ### Évolution temporelle
 
