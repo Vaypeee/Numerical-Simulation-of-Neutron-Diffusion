@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "primme.h"
 
 /* variables statiques -- accessibles  */
@@ -28,6 +29,8 @@ void matvec_primme(void *vx, void *vy, int *blockSize, primme_params *primme)
 {
     int i, j, b;
     double *x = vx, *y=vy;
+
+    (void) primme;   /* parametre impose par l'interface PRIMME, non utilise ici */
 
     for(b = 0; b < (*blockSize)*n; b+=n)
         for(i = 0; i < n; i++){

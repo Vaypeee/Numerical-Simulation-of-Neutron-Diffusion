@@ -1,25 +1,43 @@
+# =====================================================================
+#  Projet de complements de calcul numerique -- projet n 21
+#  Equation de diffusion neutronique 2D stationnaire
+# =====================================================================
+
 # librairies de PRIMME
 LIBP = -L./primme/ -lprimme
 # includes de PRIMME
-INCP = -I./primme/PRIMMESRC/COMMONSRC/ 
-# toutes les librairies
-LIB = $(LIBP) -lm -lblas -llapack
+INCP = -I./primme/PRIMMESRC/COMMONSRC/
 
-COPT = -O3 -Wall
+# BLAS et LAPACK. OpenBLAS fournit les deux ; sur une distribution qui
+# livre les deux bibliotheques separement, remplacer par -lblas -llapack.
+LIBBLAS = -lopenblas
+
+# toutes les librairies
+LIB = $(LIBP) $(LIBBLAS) -lm
+
+COPT = -O3 -Wall -Wextra
+
+OBJ = main.o geometry.o prob.o mytime.o interface_primme.o
 
 default: main
 
-clean: 
-	rm *.o 
-	rm main
+main: $(OBJ)
+	$(CC) $(COPT) $^ -o $@ $(LIB)
 
-main: main.o prob.o time.o interface_primme.o
-	cc $(COPT) $^ -o $@ $(LIB)
+main.o: main.c main.h geometry.h prob.h mytime.h interface_primme.h
+	$(CC) $(COPT) -c $< -o $@ $(INCP)
 
-main.o: main.c prob.h time.h interface_primme.h
-	cc $(COPT) -c $< -o $@ $(INCP)
+interface_primme.o: interface_primme.c interface_primme.h
+	$(CC) $(COPT) -c $< -o $@ $(INCP)
 
 %.o: %.c %.h
-	cc $(COPT) -c $< -o $@ $(INCP)
+	$(CC) $(COPT) -c $< -o $@
 
+# Verifie la matrice generee contre les fichiers CSR de reference du prof.
+check: main
+	./main -m 8 --check --no-solve
 
+clean:
+	rm -f *.o main main.exe
+
+.PHONY: default check clean
