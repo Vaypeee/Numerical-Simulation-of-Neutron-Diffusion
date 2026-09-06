@@ -12,3 +12,7 @@ out/
 *.dat
 *.png
 *.eps
+
+# --- Exception : figures conservees pour le README ---
+!figures/
+!figures/*.png

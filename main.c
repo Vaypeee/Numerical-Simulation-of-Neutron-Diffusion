@@ -9,6 +9,7 @@
 #include "critical.h"
 #include "plot.h"
 #include "euler.h"
+#include "arpack.h"
 #include "mytime.h"
 #include "interface_primme.h"
 
@@ -123,7 +124,8 @@ static void usage(const char *prog)
            PLOT_M_GROSSIER, PLOT_M_FIN);
     printf("  --euler     integration en temps autour de la taille critique\n");
     printf("  --tfinal T  duree simulee pour --euler (defaut : %g s)\n", EULER_T_FINAL);
-    printf("  --stability   verifier la limite de stabilite d'Euler\n\n");
+    printf("  --stability verifier la limite de stabilite d'Euler\n");
+    printf("  --compare   comparer PRIMME et ARPACK sur la grille -m\n\n");
 }
 
 int main(int argc, char *argv[])
@@ -131,6 +133,7 @@ int main(int argc, char *argv[])
     int     m = GRILLE_REFERENCE, nev = 1, k;
     int     do_check = 0, do_solve = 1, do_bench = 0, do_critical = 0;
     int     do_plot = 0, do_plot_all = 0, do_euler = 0, do_stability = 0;
+    int     do_compare = 0;
     double  t_final = EULER_T_FINAL;
     int     niveaux = 6;
     int     n, *ia, *ja;
@@ -149,10 +152,15 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[k], "--plot-all") == 0)         do_plot_all = 1;
         else if (strcmp(argv[k], "--euler") == 0)            do_euler = 1;
         else if (strcmp(argv[k], "--stability") == 0)        do_stability = 1;
+        else if (strcmp(argv[k], "--compare") == 0)          do_compare = 1;
         else if (strcmp(argv[k], "--tfinal") == 0 && k + 1 < argc) t_final = atof(argv[++k]);
         else if (strcmp(argv[k], "--levels") == 0 && k + 1 < argc) niveaux = atoi(argv[++k]);
         else { usage(argv[0]); return 1; }
     }
+
+    /* --- tache 6 : comparaison de solveurs ------------------------------- */
+    if (do_compare)
+        return arpack_compare(m);
 
     /* --- tache 5 : integration en temps ---------------------------------- */
     if (do_stability)

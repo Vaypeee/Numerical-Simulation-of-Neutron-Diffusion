@@ -11,6 +11,29 @@ static int n, *ia, *ja;
    primme_set_verbosity(). */
 static int verbosity = 0;
 
+/* Compteur de produits matrice-vecteur, pour comparer equitablement le cout
+   de PRIMME a celui d'un autre solveur (tache 6). */
+static long n_matvec = 0;
+
+/* Tolerance de convergence demandee a PRIMME. Le critere d'arret est
+   || r || < eps * || A ||. La valeur 0 laisse PRIMME choisir son defaut. */
+static double tolerance = 0.0;
+
+void primme_set_tolerance(double eps)
+{
+    tolerance = eps;
+}
+
+void primme_reset_matvec_count(void)
+{
+    n_matvec = 0;
+}
+
+long primme_get_matvec_count(void)
+{
+    return n_matvec;
+}
+
 void primme_set_verbosity(int v)
 {
     verbosity = v;
@@ -41,6 +64,8 @@ void matvec_primme(void *vx, void *vy, int *blockSize, primme_params *primme)
     double *x = vx, *y=vy;
 
     (void) primme;   /* parametre impose par l'interface PRIMME, non utilise ici */
+
+    n_matvec += *blockSize;
 
     for(b = 0; b < (*blockSize)*n; b+=n)
         for(i = 0; i < n; i++){
@@ -98,6 +123,8 @@ int primme(int primme_n, int *primme_ia, int *primme_ja, double *primme_a,
     primme.n = primme_n; /* dimensions de la matrice */
     primme.numEvals = nev; /* nombre de paires valeur propre-vecteur propre */
     primme.printLevel = verbosity; /* niveau d'affichage (0-4) */
+    if (tolerance > 0.0)
+        primme.eps = tolerance;    /* critere d'arret : ||r|| < eps ||A|| */
 
     err = primme_set_method (DEFAULT_MIN_TIME, &primme);
     if(err){
