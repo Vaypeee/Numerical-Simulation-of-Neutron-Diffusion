@@ -1,6 +1,5 @@
 # --- Bibliotheque tierce (LGPL 2.1) : non redistribuee ---
 # Recuperer via http://metronu.ulb.ac.be/MATH-H-301/code.projet.v1.zip
-primme/
 
 # --- Artefacts de compilation ---
 *.o

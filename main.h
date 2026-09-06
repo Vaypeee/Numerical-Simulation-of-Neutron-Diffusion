@@ -19,4 +19,10 @@
 #define PLOT_M_GROSSIER  15
 #define PLOT_M_FIN      505
 
+/* Tâche 5 : grille et durée par défaut de l'intégration en temps. La grille
+   est un compromis entre finesse spatiale et coût, le pas de temps d'Euler
+   progressif étant contraint en O(h²). */
+#define EULER_M_DEFAUT   57
+#define EULER_T_FINAL   1.0
+
 #endif /* MAIN_H */

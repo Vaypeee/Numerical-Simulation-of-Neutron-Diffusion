@@ -8,6 +8,7 @@
 #include "residual.h"
 #include "critical.h"
 #include "plot.h"
+#include "euler.h"
 #include "mytime.h"
 #include "interface_primme.h"
 
@@ -118,15 +119,19 @@ static void usage(const char *prog)
     printf("  --critical  etude de convergence de la dimension critique\n");
     printf("  --levels K  nombre de grilles pour --critical (defaut : 6)\n");
     printf("  --plot      tracer le mode fondamental (gnuplot) pour la grille -m\n");
-    printf("  --plot-all  tracer pour m = %d (grossier) et m = %d (fin)\n\n",
+    printf("  --plot-all  tracer pour m = %d (grossier) et m = %d (fin)\n",
            PLOT_M_GROSSIER, PLOT_M_FIN);
+    printf("  --euler     integration en temps autour de la taille critique\n");
+    printf("  --tfinal T  duree simulee pour --euler (defaut : %g s)\n", EULER_T_FINAL);
+    printf("  --stability   verifier la limite de stabilite d'Euler\n\n");
 }
 
 int main(int argc, char *argv[])
 {
     int     m = GRILLE_REFERENCE, nev = 1, k;
     int     do_check = 0, do_solve = 1, do_bench = 0, do_critical = 0;
-    int     do_plot = 0, do_plot_all = 0;
+    int     do_plot = 0, do_plot_all = 0, do_euler = 0, do_stability = 0;
+    double  t_final = EULER_T_FINAL;
     int     niveaux = 6;
     int     n, *ia, *ja;
     double *a, *evals, *evecs, res;
@@ -142,9 +147,20 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[k], "--critical") == 0)         do_critical = 1;
         else if (strcmp(argv[k], "--plot") == 0)             do_plot = 1;
         else if (strcmp(argv[k], "--plot-all") == 0)         do_plot_all = 1;
+        else if (strcmp(argv[k], "--euler") == 0)            do_euler = 1;
+        else if (strcmp(argv[k], "--stability") == 0)        do_stability = 1;
+        else if (strcmp(argv[k], "--tfinal") == 0 && k + 1 < argc) t_final = atof(argv[++k]);
         else if (strcmp(argv[k], "--levels") == 0 && k + 1 < argc) niveaux = atoi(argv[++k]);
         else { usage(argv[0]); return 1; }
     }
+
+    /* --- tache 5 : integration en temps ---------------------------------- */
+    if (do_stability)
+        return euler_stability_demo(m == GRILLE_REFERENCE ? EULER_M_DEFAUT : m);
+
+    if (do_euler)
+        return euler_study(m == GRILLE_REFERENCE ? EULER_M_DEFAUT : m,
+                           t_final, "out");
 
     /* --- tache 4 : visualisation du mode fondamental --------------------- */
     if (do_plot_all)
