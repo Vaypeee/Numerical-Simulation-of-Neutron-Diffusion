@@ -23,21 +23,30 @@
    propre de A devient la plus grande de B, et l'on demanderait "LA" plutot
    que "SA".
 
-   CETTE TRANSFORMATION EST INUTILE, et il faut le dire : les sous-espaces
-   de Krylov sont invariants par decalage,
+   CE DECALAGE N'ACCELERE RIEN, et il faut le dire : les sous-espaces de
+   Krylov sont invariants par decalage,
 
         K_k(sigma I - A, v)  =  K_k(A, v)   pour tout sigma,
 
    puisque chaque puissance (sigma I - A)^j v est une combinaison lineaire
    des A^i v. Lanczos explore donc exactement le meme espace dans les deux
-   cas, et converge a la meme vitesse. La fonction arpack_compare() le
-   verifie experimentalement : les deux variantes consomment le meme nombre
-   de produits matrice-vecteur, aux arrondis pres.
+   cas, et converge a la meme vitesse par iteration.
 
-   On resout donc directement A avec "SA" (smallest algebraic), ce qui est
-   plus simple et, accessoirement, plus precis : le critere d'arret d'ARPACK
-   etant relatif a la valeur propre visee, viser lambda_min ~ 2 donne un
-   seuil absolu bien plus serre que viser lambda_max(B) ~ 8/h^2.
+   Attention toutefois a ne pas en conclure que les deux variantes coutent
+   la meme chose en pratique : le critere d'arret d'ARPACK est
+
+        bounds(i)  <=  tol * |ritz(i)| ,
+
+   donc RELATIF a la valeur propre visee. Sans decalage on vise
+   lambda_min ~ 2 ; avec decalage on vise lambda_max(B) ~ 8/h^2. A tol
+   identique, la variante decalee s'arrete donc sur une precision ABSOLUE
+   environ sigma/lambda_min fois plus laxiste, facteur qui croit comme h^-2.
+   Elle parait alors beaucoup moins chere, mais rend un resultat d'autant
+   moins precis. arpack_compare() convertit les tolerances pour comparer les
+   deux a precision absolue egale, et montre qu'elles se rejoignent alors.
+
+   On resout donc directement A avec "SA" (smallest algebraic) : c'est plus
+   simple, et le critere d'arret porte directement sur la grandeur voulue.
 
    La seule transformation qui accelererait REELLEMENT la convergence est le
    mode "shift-invert", qui remplace A par (A - sigma I)^-1 et separe
@@ -107,7 +116,7 @@ static double gershgorin_max(int n, const int *ia, const double *a)
 }
 
 int arpack_solve(int n, const int *ia, const int *ja, const double *a,
-                 int avec_decalage, double tol_abs,
+                 int avec_decalage, double tol_rel,
                  double *eval, double *evec, long *n_matvec)
 {
     a_int   ido = 0, info = 0, ierr = 0;
@@ -115,7 +124,7 @@ int arpack_solve(int n, const int *ia, const int *ja, const double *a,
     a_int   iparam[11], ipntr[11];
     a_int  *select = NULL;
     double *resid = NULL, *v = NULL, *workd = NULL, *workl = NULL, *d = NULL;
-    double  tol = 0.0;          /* rempli plus bas ; 0 => precision machine */
+    double  tol;                /* voir plus bas ; 0 => precision machine */
     double  sigma_shift = 0.0;  /* non utilise en mode 1 */
     double  sigma;
     const char *which;
@@ -150,18 +159,18 @@ int arpack_solve(int n, const int *ia, const int *ja, const double *a,
     sigma = avec_decalage ? gershgorin_max(n, ia, a) : 0.0;
     which = avec_decalage ? "LA" : "SA";
 
-    /* --- traduction de la precision absolue en tolerance relative -------
-       Le critere d'arret d'ARPACK est   bounds(i) <= tol * |ritz(i)| ,
-       donc relatif a la valeur propre VISEE. Or celle-ci n'est pas la meme
-       selon la variante : lambda_min(A) ~ 2 sans decalage, mais
+    /* Tolerance transmise a ARPACK. Son critere d'arret est
+
+            bounds(i)  <=  tol * |ritz(i)|
+
+       donc RELATIF a la valeur propre visee. Celle-ci differe fortement
+       entre les deux variantes : lambda_min(A) ~ 2 sans decalage, contre
        lambda_max(B) = sigma - lambda_min ~ 8/h^2 avec decalage. A tol egal,
        la variante decalee s'arrete donc sur une precision absolue
-       sigma/lambda_min fois plus laxiste, ecart qui croit comme h^-2.
-       Pour comparer les deux a precision ABSOLUE egale, on convertit :  */
-    if (tol_abs > 0.0) {
-        double echelle_ritz = avec_decalage ? gershgorin_max(n, ia, a) : 1.0;
-        tol = tol_abs / (echelle_ritz > 0.0 ? echelle_ritz : 1.0);
-    }
+       sigma/lambda_min fois plus laxiste, facteur qui croit comme h^-2.
+       C'est a l'appelant de convertir s'il veut comparer les deux a
+       precision absolue egale ; voir arpack_compare(). */
+    tol = tol_rel;
 
     for (i = 0; i < 11; i++) { iparam[i] = 0; ipntr[i] = 0; }
     iparam[0] = 1;      /* strategie de decalage : shifts exacts       */
@@ -317,30 +326,65 @@ int arpack_compare(int m)
         printf("  Ecart relatif                        : %.3e\n",
                fabs(*ev_primme - *ev_arpack) / fabs(*ev_primme));
 
+        printf("\n  Note : les deux solveurs n'ont pas le meme critere d'arret\n");
+        printf("  (PRIMME : ||r|| < eps ||A|| ; ARPACK : bounds <= tol |ritz|), et\n");
+        printf("  les residus atteints different donc un peu. Ils sont donnes\n");
+        printf("  ci-dessus pour que la comparaison reste interpretable : l'ecart\n");
+        printf("  de cout depasse tres largement l'ecart de precision.\n");
+
         /* --- le decalage sert-il a quelque chose ? ------------------------
            On resout le meme probleme sans decalage, en demandant "SA"
            directement sur A. Voir la note en tete de fichier : les
            sous-espaces de Krylov etant invariants par decalage, les deux
            strategies doivent couter exactement la meme chose. */
         {
-            double ev_sa, *vec_sa = malloc((size_t) n * sizeof(double));
-            long   mv_sa = 0;
+            double *vec_v = malloc((size_t) n * sizeof(double));
+            double  ev_naif, ev_equi;
+            long    mv_naif = 0, mv_equi = 0;
 
-            if (vec_sa != NULL
-                && !arpack_solve(n, ia, ja, a, 1, tol_equiv, &ev_sa, vec_sa, &mv_sa)) {
-                printf("\n  Effet du decalage spectral sur le cout d'ARPACK :\n");
-                printf("    \"SA\" directement sur A   : %6ld produits matrice-vecteur\n",
-                       mv_arpack);
-                printf("    \"LA\" sur B = sigma I - A : %6ld produits matrice-vecteur\n",
-                       mv_sa);
-                printf("    ecart sur lambda_min      : %.3e\n",
-                       fabs(ev_sa - *ev_arpack));
-                printf("    -> cout essentiellement identique : le decalage ne change\n");
-                printf("       rien, les sous-espaces de Krylov etant invariants par\n");
-                printf("       decalage. L'ecart residuel vient des arrondis dans la\n");
-                printf("       recurrence de Lanczos et de la strategie de redemarrage.\n");
+            /* Precision ABSOLUE commune visee par les deux variantes. Elle est
+               choisie largement au-dessus de l'epsilon machine pour que les
+               deux tolerances relatives correspondantes restent atteignables
+               (viser la precision machine sur lambda_min conduirait, pour la
+               variante decalee, a une tolerance relative de l'ordre de 1e-20,
+               inatteignable et donc denuee de sens). */
+            const double cible_abs = 1e-10;
+            double lam    = fabs(*ev_arpack);
+            double ritz_B = sigma - lam;      /* valeur propre visee sur B */
+            long   mv_sa_e = 0;
+            double ev_sa_e;
+
+            if (vec_v != NULL) {
+                printf("\n  Effet du decalage spectral B = sigma I - A sur ARPACK :\n");
+                printf("    Le ritz vise vaut %.2f sans decalage, %.0f avec :"
+                       " rapport %.0f.\n", lam, ritz_B, ritz_B / lam);
+
+                printf("\n    a tolerance NUMERIQUE identique (precision machine) :\n");
+                printf("      \"SA\" sur A  : %7ld matvecs, residu %.2e\n",
+                       mv_arpack, res_arpack);
+                if (!arpack_solve(n, ia, ja, a, 1, 0.0, &ev_naif, vec_v, &mv_naif))
+                    printf("      \"LA\" sur B  : %7ld matvecs, ecart sur lambda %.2e\n",
+                           mv_naif, fabs(ev_naif - *ev_arpack));
+                printf("      -> le decalage parait moins cher, mais son critere"
+                       " d'arret est\n         %.0f fois plus laxiste en absolu :"
+                       " la comparaison est faussee.\n", ritz_B / lam);
+
+                printf("\n    a precision ABSOLUE identique (%.0e sur lambda_min) :\n",
+                       cible_abs);
+                if (!arpack_solve(n, ia, ja, a, 0, cible_abs / lam,
+                                  &ev_sa_e, vec_v, &mv_sa_e))
+                    printf("      \"SA\" sur A  : %7ld matvecs (tol = %.2e)\n",
+                           mv_sa_e, cible_abs / lam);
+                if (!arpack_solve(n, ia, ja, a, 1, cible_abs / ritz_B,
+                                  &ev_equi, vec_v, &mv_equi))
+                    printf("      \"LA\" sur B  : %7ld matvecs (tol = %.2e)\n",
+                           mv_equi, cible_abs / ritz_B);
+                printf("      -> couts du meme ordre : le decalage n'accelere rien,\n");
+                printf("         les sous-espaces de Krylov etant invariants par\n");
+                printf("         decalage. Seul le shift-invert accelererait, au prix\n");
+                printf("         d'une factorisation.\n");
             }
-            free(vec_sa);
+            free(vec_v);
         }
 
         /* --- controle croise par la symetrie du spectre --------------------

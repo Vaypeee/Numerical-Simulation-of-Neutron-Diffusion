@@ -143,9 +143,17 @@ PRIMME (fourni) contre ARPACK (`dsaupd`/`dseupd`, licence BSD), à précision
 | 57 | 2 513 | 337 | 1 217 | 0.005 s | 0.048 s |
 | 113 | 10 273 | 607 | 3 692 | 0.338 s | 0.669 s |
 | 225 | 41 537 | 1 300 | 15 422 | 0.923 s | 28.2 s |
+| 505 | 211 537 | 2 578 | 65 537 | 5.47 s | 596 s |
 
-L'écart se creuse avec la taille du problème. Les valeurs propres concordent
-à 10⁻¹³ près.
+L'écart se creuse avec la taille du problème : Lanczos souffre du
+resserrement relatif du bas du spectre, `(λ₂-λ₁)/(λ_max-λ₁) = O(h²)`, là où
+la méthode de type Jacobi–Davidson avec redémarrage de PRIMME encaisse bien
+mieux. Les valeurs propres concordent à 10⁻¹³ près.
+
+Les deux solveurs n'ont pas exactement le même critère d'arrêt (PRIMME :
+`‖r‖ < eps·‖A‖` ; ARPACK : `bounds ≤ tol·|ritz|`), les résidus atteints sont
+donc reportés par le programme pour que la comparaison reste interprétable.
+L'écart de coût dépasse très largement l'écart de précision.
 
 ---
 
@@ -233,13 +241,23 @@ reste en registre, `x[i]` n'est chargé qu'une fois, et `ia[i+1]` est recyclé
 en `ia[i]` de l'itération suivante. Mesuré 1,6 à 1,75 fois plus rapide que
 l'implémentation littérale en trois passes.
 
-**Le décalage spectral ne sert à rien pour Lanczos.** On pourrait croire que
-remplacer A par `B = σI - A` accélère la convergence vers λ_min en la
-transformant en recherche de λ_max. C'est faux : les sous-espaces de Krylov
-sont invariants par décalage, `K(σI - A, v) = K(A, v)`. Les deux variantes
-consomment le même nombre de produits matrice-vecteur, ce que
-[`arpack.c`](arpack.c) vérifie expérimentalement. Seul le mode *shift-invert*
-accélérerait réellement, au prix d'une factorisation creuse écartée ici.
+**Le décalage spectral ne sert à rien pour Lanczos — et le mesurer demande
+de la prudence.** On pourrait croire que remplacer A par `B = σI - A`
+accélère la convergence vers λ_min en la transformant en recherche de λ_max.
+C'est faux : les sous-espaces de Krylov sont invariants par décalage,
+`K(σI - A, v) = K(A, v)`, donc Lanczos explore le même espace.
+
+Le piège est que la mesure naïve semble donner raison au décalage : à
+tolérance numérique identique, `"LA"` sur B coûte 12 346 matvecs contre
+15 422 pour `"SA"` sur A (m = 225). L'explication n'est pas une convergence
+plus rapide mais le critère d'arrêt d'ARPACK, `bounds ≤ tol·|ritz|`, relatif
+à la valeur propre visée — ici 32 766 au lieu de 2,26, soit un seuil absolu
+14 490 fois plus laxiste. Une fois les tolérances converties pour viser la
+même précision absolue, les coûts se rejoignent : **1 831 contre 1 696**.
+
+Seul le mode *shift-invert* accélérerait réellement, au prix d'une
+factorisation creuse écartée ici. Le programme mène cette expérience
+lui-même (`--compare`).
 
 **Redimensionner sans remailler.** Une homothétie de rapport α sur Ω divise A
 par α². L'étude temporelle exploite cette propriété pour simuler des

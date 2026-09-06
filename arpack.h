@@ -32,14 +32,14 @@ int arpack_smallest(int n, const int *ia, const int *ja, const double *a,
   Variante permettant de choisir la strategie :
     avec_decalage = 1 : resout sur B = sigma I - A en demandant "LA"
     avec_decalage = 0 : resout directement sur A en demandant "SA"
-  tol_abs impose une precision ABSOLUE sur lambda_min ; elle est traduite
-  en tolerance relative selon la variante, car le critere d'arret
-  d'ARPACK est relatif a la valeur propre visee. tol_abs = 0 laisse
-  ARPACK travailler a la precision machine.
+  tol_rel est la tolerance RELATIVE transmise a ARPACK (critere
+  bounds <= tol * |ritz|) ; 0 demande la precision machine. Comme la
+  valeur propre visee differe d'une variante a l'autre, c'est a
+  l'appelant de convertir s'il veut une precision absolue identique.
   Sert a comparer les deux strategies a precision egale.
 */
 int arpack_solve(int n, const int *ia, const int *ja, const double *a,
-                 int avec_decalage, double tol_abs,
+                 int avec_decalage, double tol_rel,
                  double *eval, double *evec, long *n_matvec);
 
 /*
