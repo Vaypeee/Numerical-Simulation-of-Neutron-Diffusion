@@ -17,14 +17,14 @@ LIB = $(LIBP) $(LIBBLAS) -lm
 
 COPT = -O3 -Wall -Wextra
 
-OBJ = main.o geometry.o prob.o mytime.o interface_primme.o
+OBJ = main.o geometry.o prob.o residual.o mytime.o interface_primme.o
 
 default: main
 
 main: $(OBJ)
 	$(CC) $(COPT) $^ -o $@ $(LIB)
 
-main.o: main.c main.h geometry.h prob.h mytime.h interface_primme.h
+main.o: main.c main.h geometry.h prob.h residual.h mytime.h interface_primme.h
 	$(CC) $(COPT) -c $< -o $@ $(INCP)
 
 interface_primme.o: interface_primme.c interface_primme.h

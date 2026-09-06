@@ -5,6 +5,7 @@
 #include "main.h"
 #include "geometry.h"
 #include "prob.h"
+#include "residual.h"
 #include "mytime.h"
 #include "interface_primme.h"
 
@@ -110,15 +111,16 @@ static void usage(const char *prog)
     printf("  -m M        nombre de points de grille par direction (defaut : %d)\n",
            GRILLE_REFERENCE);
     printf("  --check     comparer la matrice aux fichiers CSR de reference\n");
-    printf("  --no-solve  ne pas appeler PRIMME (generation de la matrice seule)\n\n");
+    printf("  --no-solve  ne pas appeler PRIMME (generation de la matrice seule)\n");
+    printf("  --bench     comparer les deux implementations du residu\n\n");
 }
 
 int main(int argc, char *argv[])
 {
     int     m = GRILLE_REFERENCE, nev = 1, k;
-    int     do_check = 0, do_solve = 1;
+    int     do_check = 0, do_solve = 1, do_bench = 0;
     int     n, *ia, *ja;
-    double *a, *evals, *evecs;
+    double *a, *evals, *evecs, res;
     double  tc1, tc2, tw1, tw2;
     grid_t  g;
 
@@ -127,6 +129,7 @@ int main(int argc, char *argv[])
         if (strcmp(argv[k], "-m") == 0 && k + 1 < argc)      m = atoi(argv[++k]);
         else if (strcmp(argv[k], "--check") == 0)            do_check = 1;
         else if (strcmp(argv[k], "--no-solve") == 0)         do_solve = 0;
+        else if (strcmp(argv[k], "--bench") == 0)            do_bench = 1;
         else { usage(argv[0]); return 1; }
     }
 
@@ -177,7 +180,17 @@ int main(int argc, char *argv[])
 
     printf("\nTemps de solution (CPU)     : %8.3f s", tc2 - tc1);
     printf("\nTemps de solution (horloge) : %8.3f s\n", tw2 - tw1);
-    printf("\nValeur propre minimale calculee : %.12g m^-2\n\n", evals[0]);
+    printf("\nValeur propre minimale calculee : %.12g m^-2\n", evals[0]);
+
+    /* --- tache 2 : norme relative du residu ------------------------------ */
+    res = residual_norm(n, ia, ja, a, evals[0], evecs);
+    printf("Residu relatif ||A.Phi - beta^2.Phi|| / ||Phi|| : %.6e\n\n", res);
+
+    if (do_bench) {
+        /* nombre de repetitions ajuste pour que la mesure dure ~1 s */
+        int repet = 1 + 40000000 / (ia[n] + 1);
+        residual_benchmark(n, ia, ja, a, evals[0], evecs, repet);
+    }
 
     free(ia); free(ja); free(a); free(evals); free(evecs);
     grid_free(&g);
